@@ -8,27 +8,24 @@ public class PlayerInterface : MonoBehaviour {
     public GameObject Tower;
     public double TowerConnectionDistance;
     public List<GameObject> allNodesList = new List<GameObject>();
+    private GameObject PreviewTower;
+    private GameObject Tower1;
+    private GameObject Tower2;
 
     // Use this for initialization
     void Start () {
-
-        GameObject previewTower = Instantiate(Tower, new Vector2(0,0), Quaternion.identity) as GameObject;
-        previewTower.GetComponent<SpriteRenderer>().color = new Color(1f, 1f, 1f, .2f);
-        previewTower.name = "Preview Tower";
-        previewTower.tag = "Preview";
-        previewTower.SetActive(true);
-
-        BuildTower(Tower, new Vector2(0, 0));
+        PreviewTower = BuildTower(Get2DMousePosition(), "Preview Tower", "Preview",0);
+        Tower1 = BuildTower(new Vector2(0,0), "Tower (0)", "Tower",100);
+        Tower2 = BuildTower(new Vector2(0,3.9f), "Tower (1)", "Tower",0);
     }
 
     // Update is called once per frame
     void Update () {
         if (Input.GetMouseButtonDown(0))
         {
-            BuildTower(Tower,Get2DMousePosition());
+            BuildTower(Get2DMousePosition(), "Tower (" + allNodesList.Count + ")","Tower",50);
         }
-        GameObject previewTower = GameObject.Find("Preview Tower");
-            previewTower.transform.position = Get2DMousePosition();
+            PreviewTower.transform.position = Get2DMousePosition();
     }
 
     public Vector2 Get2DMousePosition()
@@ -43,21 +40,48 @@ public class PlayerInterface : MonoBehaviour {
         return mousePos2d;
     }
 
-    public void BuildTower(GameObject Tower, Vector2 MousePos)
+    public GameObject BuildTower(Vector2 Position, string name, string tag, int energy)
     {
-        allNodesList.Clear();
-        allNodesList.AddRange(new List<GameObject>(GameObject.FindGameObjectsWithTag("Tower")));
+        GameObject newTower = Instantiate(Tower, Position, Quaternion.identity) as GameObject;
 
-        GameObject newTowerObj = Instantiate(Tower, MousePos, Quaternion.identity) as GameObject;
+        newTower.name = name;
+        newTower.tag = tag;
+        newTower.GetComponent<Tower>().Energy = energy;
 
-        newTowerObj.GetComponent<Connections>().FindNearbyTowers(false);
+        if (tag == "Preview")
+        {
+            newTower.GetComponent<SpriteRenderer>().color = new Color(1f, 1f, 1f, .2f);
 
-        newTowerObj.name = "Tower (" + allNodesList.Count + ")";
-        newTowerObj.SetActive(true);
+        }
+        else if (tag == "Tower")
+        {
+            AddNode(newTower, Position);
+            newTower.GetComponent<Tower>().DrawConnections();
+        }
 
-        allNodesList.Add(newTowerObj);
         
+        newTower.SetActive(true);
+
+        return newTower;
     }
 
+    public GameObject AddNode(GameObject Structure, Vector2 Position)
+    {
+        allNodesList.Add(Structure); // add this node to the main list
+        Structure.GetComponent<Tower>().AddNearNeighbors(false); // adds nearby connections
+
+        return Structure;
+    }
+    public void RemoveNode(GameObject Structure)
+    {
+        // look through my own list of neighbor connections and delete the any references my neighbor has to me
+       foreach( Tower.Neighbor node in Structure.GetComponent<Tower>().NeighborNodes)
+        {
+            node.GameObjectNode.GetComponent<Tower>().NeighborNodes.Remove(node);
+        }
+        allNodesList.Remove(Structure); // remove from main node list
+
+        Structure.GetComponent<Tower>().NeighborNodes.Clear();
+    }
 
 }
