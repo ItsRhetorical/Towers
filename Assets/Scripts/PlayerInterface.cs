@@ -14,16 +14,16 @@ public class PlayerInterface : MonoBehaviour {
 
     // Use this for initialization
     void Start () {
-        PreviewTower = BuildTower(Get2DMousePosition(), "Preview Tower", "Preview",0);
-        Tower1 = BuildTower(new Vector2(0,0), "Tower (0)", "Tower",100);
-        Tower2 = BuildTower(new Vector2(0,3.9f), "Tower (1)", "Tower",0);
+        PreviewTower = BuildTower(Get2DMousePosition(), "Preview Tower", "Preview",0, "preview");
+        Tower1 = BuildTower(new Vector2(10,-5), "Tower (source)", "Tower",100, "source");
+        Tower2 = BuildTower(new Vector2(-10.0f,5.0f), "Tower (end)", "Tower",0, "sink");
     }
 
     // Update is called once per frame
     void Update () {
         if (Input.GetMouseButtonDown(0))
         {
-            BuildTower(Get2DMousePosition(), "Tower (" + allNodesList.Count + ")","Tower",50);
+            BuildTower(Get2DMousePosition(), "Tower (" + allNodesList.Count + ")","Tower",0,"normal");
         }
             PreviewTower.transform.position = Get2DMousePosition();
     }
@@ -40,13 +40,14 @@ public class PlayerInterface : MonoBehaviour {
         return mousePos2d;
     }
 
-    public GameObject BuildTower(Vector2 Position, string name, string tag, int energy)
+    public GameObject BuildTower(Vector2 Position, string name, string tag, int energy, string type)
     {
         GameObject newTower = Instantiate(Tower, Position, Quaternion.identity) as GameObject;
 
         newTower.name = name;
         newTower.tag = tag;
         newTower.GetComponent<Tower>().Energy = energy;
+        newTower.GetComponent<Tower>().Type = type;
 
         if (tag == "Preview")
         {

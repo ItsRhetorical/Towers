@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEditor;
 using UnityEngine.UI;
 
 public class Tower : MonoBehaviour
@@ -9,7 +10,11 @@ public class Tower : MonoBehaviour
     public List<Neighbor> NeighborNodes = new List<Neighbor>();
     public List<Vector3> ConnectionEndpoints = new List<Vector3>();
     public PlayerInterface PlayerInterface;
-    public int Energy;
+    private LineRenderer Line;
+    private AnimationCurve LineWidth = new AnimationCurve();
+    public double Energy;
+    public string Type;
+    public double ThermalCoef;
 
     [System.Serializable]
     public struct Neighbor
@@ -21,11 +26,16 @@ public class Tower : MonoBehaviour
     // Use this for initialization
     void Start()
     {
+
+        if (this.tag != "Preview")
+            InvokeRepeating("EnergyFlow", 0f, .01f);
     }
 
     // Update is called once per frame
     void Update()
     {
+        if (this.tag != "Preview")
+            setColor();
         DrawPreviewConnections();
     }
 
@@ -38,14 +48,36 @@ public class Tower : MonoBehaviour
         DrawConnections();
     }
 
+    public void ClearCurve(AnimationCurve curve)
+    {
+        for (int i = 0; i < curve.length; i++)
+        {
+            curve.RemoveKey(i);
+        }
+    }
+
     public void DrawConnections()
     {
+        Line = GetComponent<LineRenderer>();
+        ClearCurve(LineWidth);
+        var count = 0;
         foreach (Neighbor node in NeighborNodes)
         {
+            float lineSegmentLength = 1f / (NeighborNodes.Count + 2);
             //we have to bounce the line back and forth to look like the lines originate from the object
             ConnectionEndpoints.Add(transform.position); //add self
             ConnectionEndpoints.Add(node.GameObjectNode.transform.position); //add next node in list
+
+            LineWidth.AddKey(lineSegmentLength*count, 0.3f);
+            AnimationUtility.SetKeyLeftTangentMode(LineWidth, count, AnimationUtility.TangentMode.Constant);
+
+            LineWidth.AddKey(lineSegmentLength * (count+1f), 0.0f);
+            AnimationUtility.SetKeyLeftTangentMode(LineWidth, count+1, AnimationUtility.TangentMode.Constant);
+
+            count += 2;
         }
+        Line.widthCurve = LineWidth;
+        Line.widthMultiplier = 1f;
 
         // print("I am " + name + ", Connected to " + NeighborNodes.Count + " Showing connections " + (ConnectionEndpoints.Count / 2));
 
@@ -80,6 +112,38 @@ public class Tower : MonoBehaviour
             }
 
         }
+    }
+
+    public void setColor()
+    {
+        float colorAdjust = 1f - ((float)Energy / 100f);
+        var color = GetComponent<SpriteRenderer>().color;
+        color.g = colorAdjust;
+        color.b = colorAdjust;
+
+        GetComponent<SpriteRenderer>().color = color;
+    }
+
+    //modeled after heat flow dQ/dt = -K*A*dT/x
+    // K is thermal coeficient ~2 for metal,dt is differnece in temp, x is distance, and A is area
+    public void EnergyFlow()
+    {
+        foreach (Neighbor neighbor in NeighborNodes)
+        {
+           
+            double TemperatureDiff = this.Energy - neighbor.GameObjectNode.GetComponent<Tower>().Energy;
+
+            var rate = TemperatureDiff * ThermalCoef/ neighbor.Distance;
+
+            if (neighbor.GameObjectNode.GetComponent<Tower>().Type == "normal")
+                neighbor.GameObjectNode.GetComponent<Tower>().Energy += rate;
+            if (this.Type =="normal")
+                this.Energy += -rate;
+            this.GetComponent<LineRenderer>().startColor = Color.red;
+            this.GetComponent<LineRenderer>().endColor = Color.white;
+
+        }
+
     }
 }
 
